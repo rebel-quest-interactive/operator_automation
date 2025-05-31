@@ -50,59 +50,62 @@ jobs:
             newman-report.html
 
       - name: Enviar notificación a Slack
+        shell: bash
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           TOTAL: ${{ steps.resultados.outputs.total }}
           SUCCESS: ${{ steps.resultados.outputs.success }}
           FAILED: ${{ steps.resultados.outputs.failed }}
-          # URL del artefacto (usa el enlace al artefacto en tu organización/repo)
           ARTIFACTS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         run: |
-          # Construir bloques de Slack con formato Block Kit
+          # —————————————————————————————————————————————————————
+          # Generar el payload para Slack usando Block Kit
+          # IMPORTANTE: el marcador EOF debe ir SIN sangrías
           read -r -d '' PAYLOAD << EOF
-          {
-            "blocks": [
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": ":rocket: *Resultados de pruebas Mock*"
-                }
-              },
-              {
-                "type": "section",
-                "fields": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "*✅ Éxito:*\n$SUCCESS"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*❌ Fallos:*\n$FAILED"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*📊 Total:*\n$TOTAL"
-                  }
-                ]
-              },
-              {
-                "type": "actions",
-                "elements": [
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Descargar reporte HTML"
-                    },
-                    "url": "$ARTIFACTS_URL"
-                  }
-                ]
-              }
-            ]
-          }
-          EOF
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": ":rocket: *Resultados de pruebas Mock*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {
+          "type": "mrkdwn",
+          "text": "*✅ Éxito:*\n$SUCCESS"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*❌ Fallos:*\n$FAILED"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*📊 Total:*\n$TOTAL"
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Descargar reporte HTML"
+          },
+          "url": "$ARTIFACTS_URL"
+        }
+      ]
+    }
+  ]
+}
+EOF
 
+          
           # Enviar el mensaje a Slack
           curl -X POST \
                -H 'Content-Type: application/json' \
