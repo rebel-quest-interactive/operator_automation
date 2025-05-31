@@ -67,20 +67,24 @@ jobs:
               },
               {
                 "type": "section",
-                "fields": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "*✅ Éxito:*\n'"$SUCCESS"'"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*❌ Fallos:*\n'"$FAILED"'"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*📊 Total:*\n'"$TOTAL"'"
-                  }
-                ]
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*✅ Éxito:* '"$SUCCESS"'"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*❌ Fallos:* '"$FAILED"'"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*📊 Total:* '"$TOTAL"'"
+                }
               },
               {
                 "type": "actions",
