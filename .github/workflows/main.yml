@@ -56,48 +56,46 @@ jobs:
           FAILED: ${{ steps.resultados.outputs.failed }}
           ARTIFACTS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         run: |
-          PAYLOAD=$(cat <<EOF
-{
-  "blocks": [
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": ":rocket: *Resultados de pruebas Mock*"
-      }
-    },
-    {
-      "type": "section",
-      "fields": [
-        {
-          "type": "mrkdwn",
-          "text": "*✅ Éxito:*\n$SUCCESS"
-        },
-        {
-          "type": "mrkdwn",
-          "text": "*❌ Fallos:*\n$FAILED"
-        },
-        {
-          "type": "mrkdwn",
-          "text": "*📊 Total:*\n$TOTAL"
-        }
-      ]
-    },
-    {
-      "type": "actions",
-      "elements": [
-        {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Descargar reporte HTML"
-          },
-          "url": "$ARTIFACTS_URL"
-        }
-      ]
-    }
-  ]
-}
-EOF
-)
+          PAYLOAD='{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ":rocket: *Resultados de pruebas Mock*"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*✅ Éxito:*\n'"$SUCCESS"'"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*❌ Fallos:*\n'"$FAILED"'"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*📊 Total:*\n'"$TOTAL"'"
+                  }
+                ]
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Descargar reporte HTML"
+                    },
+                    "url": "'"$ARTIFACTS_URL"'"
+                  }
+                ]
+              }
+            ]
+          }'
+
           curl -X POST -H 'Content-Type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
