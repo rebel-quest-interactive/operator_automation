@@ -15,13 +15,93 @@ jobs:
       - name: Install Newman & HTML Reporter
         run: npm install -g newman newman-reporter-htmlextra
 
-      - name: Run Postman collection and generate reports
+      - name: Run “Auth” and export environment
         run: |
           newman run mock_operator.postman_collection.json \
+            --folder Auth \
             -e mock_operator.postman_environment.json \
-            -r cli,json,htmlextra \
-            --reporter-json-export newman-report.json \
-            --reporter-htmlextra-export newman-report.html
+            --export-environment exported_env_auth.json \
+            --reporters cli
+
+      - name: Run “Sell” and export environment
+        run: |
+          newman run mock_operator.postman_collection.json \
+            --folder Sell \
+            -e exported_env_auth.json \
+            --export-environment exported_env_sell.json \
+            --reporters json \
+            --reporter-json-export sell-report.json
+
+      - name: Run “Win” and export environment
+        run: |
+          newman run mock_operator.postman_collection.json \
+            --folder "Credit - Win" \
+            -e exported_env_sell.json \
+            --export-environment exported_env_win.json \
+            --reporters json \
+            --reporter-json-export win-report.json
+
+      - name: Run “Cancel” and export environment
+        run: |
+          newman run mock_operator.postman_collection.json \
+            --folder Cancel \
+            -e exported_env_win.json \
+            --export-environment exported_env_cancel.json \
+            --reporters json \
+            --reporter-json-export cancel-report.json
+
+      - name: Run “Loss” and export environment
+        run: |
+          newman run mock_operator.postman_collection.json \
+            --folder "Credit - Loss" \
+            -e exported_env_cancel.json \
+            --export-environment exported_env_loss.json \
+            --reporters json \
+            --reporter-json-export loss-report.json
+
+      - name: Merge JSON results into newman-report.json
+        run: |
+          jq -s '{
+            run: {
+              stats: {
+                requests: {
+                  total: (.[0].run.stats.requests.total // 0)
+                          + (.[1].run.stats.requests.total // 0)
+                          + (.[2].run.stats.requests.total // 0)
+                          + (.[3].run.stats.requests.total // 0),
+                  failed: (.[0].run.stats.requests.failed // 0)
+                          + (.[1].run.stats.requests.failed // 0)
+                          + (.[2].run.stats.requests.failed // 0)
+                          + (.[3].run.stats.requests.failed // 0)
+                }
+              },
+              failures: (.[0].run.failures // [])
+                      + (.[1].run.failures // [])
+                      + (.[2].run.failures // [])
+                      + (.[3].run.failures // [])
+            }
+          }' \
+            sell-report.json \
+            win-report.json \
+            cancel-report.json \
+            loss-report.json \
+          > newman-report.json || echo "{}" > newman-report.json
+
+      - name: Generate a simple HTML summary
+        run: |
+          TOTAL=$(jq '.run.stats.requests.total' newman-report.json)
+          FAILED=$(jq '.run.stats.requests.failed' newman-report.json)
+          SUCCESS=$((TOTAL - FAILED))
+          cat <<EOF > newman-report.html
+<html>
+<body>
+  <h1>Resultados de pruebas Mock</h1>
+  <p>Total de requests: $TOTAL</p>
+  <p>✅ Éxito: $SUCCESS</p>
+  <p>❌ Fallos: $FAILED</p>
+</body>
+</html>
+EOF
 
       - name: Extraer resultados de ejecución (requests)
         id: resultados
