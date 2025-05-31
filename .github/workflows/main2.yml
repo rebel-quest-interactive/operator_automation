@@ -1,6 +1,8 @@
 name: operator_automation_v2
 
-on: push
+on:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   automated-api-tests:
