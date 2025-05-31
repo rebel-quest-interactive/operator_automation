@@ -43,7 +43,8 @@ jobs:
       - name: Enviar notificación a Slack
         shell: bash
         env:
-          SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/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"
+          # Aquí usamos el Secret en lugar de poner la URL explícita
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           TOTAL=${{ steps.resultados.outputs.total }}
           SUCCESS=${{ steps.resultados.outputs.success }}
