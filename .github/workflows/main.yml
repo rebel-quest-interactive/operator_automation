@@ -58,9 +58,6 @@ jobs:
           FAILED: ${{ steps.resultados.outputs.failed }}
           ARTIFACTS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         run: |
-          # —————————————————————————————————————————————————————
-          # Generar el payload para Slack usando Block Kit
-          # IMPORTANTE: el marcador EOF debe ir SIN sangrías
           read -r -d '' PAYLOAD << EOF
 {
   "blocks": [
@@ -103,9 +100,7 @@ jobs:
     }
   ]
 }
-
-          
-          # Enviar el mensaje a Slack
+EOF
           curl -X POST \
                -H 'Content-Type: application/json' \
                --data "$PAYLOAD" \
