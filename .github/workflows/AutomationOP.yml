@@ -3,7 +3,7 @@ name: Run Newman Tests
 on:
   push:
     branches:
-      - main  # revisa que tu rama se llame así, no MAIN en mayúsculas
+      - main
   workflow_dispatch:
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
           --reporters cli,json --reporter-json-export results.json
 
       - name: Upload results
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v3
         with:
           name: newman-results
           path: results.json
