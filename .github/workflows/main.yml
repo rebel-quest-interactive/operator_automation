@@ -23,12 +23,12 @@ jobs:
             --reporter-json-export newman-report.json \
             --reporter-htmlextra-export newman-report.html
 
-      - name: Extraer resultados de ejecución desde JSON
+      - name: Extraer resultados de ejecución (requests)
         id: resultados
         run: |
           if [ -f newman-report.json ]; then
-            TOTAL=$(jq '.run.stats.assertions.total' newman-report.json)
-            FAILED=$(jq '.run.stats.assertions.failed' newman-report.json)
+            TOTAL=$(jq '.run.stats.requests.total' newman-report.json)
+            FAILED=$(jq '.run.stats.requests.failed' newman-report.json)
             SUCCESS=$((TOTAL - FAILED))
           else
             TOTAL=0
@@ -65,24 +65,20 @@ jobs:
               },
               {
                 "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*✅ Éxito:* '"$SUCCESS"'"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*❌ Fallos:* '"$FAILED"'"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*📊 Total:* '"$TOTAL"'"
-                }
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*✅ Éxito:*\n'"$SUCCESS"'"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*❌ Fallos:*\n'"$FAILED"'"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*📊 Total:*\n'"$TOTAL"'"
+                  }
+                ]
               },
               {
                 "type": "actions",
