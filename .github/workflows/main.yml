@@ -14,8 +14,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Newman and HTML reporter
-        run: npm install -g newman newman-reporter-html
+      - name: Install Newman
+        run: npm install -g newman
 
       - name: Run Postman collection
         run: |
@@ -37,7 +37,6 @@ jobs:
             SUCCESS=0
             FAILED=0
           fi
-
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
           echo "success=$SUCCESS" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
@@ -51,63 +50,60 @@ jobs:
             newman-report.html
 
       - name: Enviar notificación a Slack
-        shell: bash
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          TOTAL: ${{ steps.resultados.outputs.total }}
+          SUCCESS: ${{ steps.resultados.outputs.success }}
+          FAILED: ${{ steps.resultados.outputs.failed }}
+          # URL del artefacto (usa el enlace al artefacto en tu organización/repo)
+          ARTIFACTS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         run: |
-          TOTAL="${{ steps.resultados.outputs.total }}"
-          SUCCESS="${{ steps.resultados.outputs.success }}"
-          FAILED="${{ steps.resultados.outputs.failed }}"
-          REPO="${{ github.repository }}"
-          RUN_ID="${{ github.run_id }}"
+          # Construir bloques de Slack con formato Block Kit
+          read -r -d '' PAYLOAD << EOF
+          {
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ":rocket: *Resultados de pruebas Mock*"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*✅ Éxito:*\n$SUCCESS"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*❌ Fallos:*\n$FAILED"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*📊 Total:*\n$TOTAL"
+                  }
+                ]
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Descargar reporte HTML"
+                    },
+                    "url": "$ARTIFACTS_URL"
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
 
-          ARTIFACTS_URL="https://github.com/$REPO/actions/runs/$RUN_ID"
-
-          # Construir payload usando Slack Block Kit para una presentación limpia
-          read -r -d '' PAYLOAD <<EOF
-{
-  "blocks": [
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": ":rocket: *Resultados de pruebas Mock*"
-      }
-    },
-    {
-      "type": "section",
-      "fields": [
-        {
-          "type": "mrkdwn",
-          "text": "*✅ Éxito:*\n$SUCCESS"
-        },
-        {
-          "type": "mrkdwn",
-          "text": "*❌ Fallos:*\n$FAILED"
-        },
-        {
-          "type": "mrkdwn",
-          "text": "*📊 Total:*\n$TOTAL"
-        }
-      ]
-    },
-    {
-      "type": "actions",
-      "elements": [
-        {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Descargar reporte HTML"
-          },
-          "url": "$ARTIFACTS_URL"
-        }
-      ]
-    }
-  ]
-}
-EOF
-
+          # Enviar el mensaje a Slack
           curl -X POST \
                -H 'Content-Type: application/json' \
                --data "$PAYLOAD" \
