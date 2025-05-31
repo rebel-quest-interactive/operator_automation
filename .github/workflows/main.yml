@@ -12,23 +12,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Newman
-        run: npm install -g newman
+      - name: Install Newman & HTML reporter
+        run: npm install -g newman newman-reporter-htmlextra
 
-      - name: Run Postman collection
+      - name: Run Postman collection and generate HTML report
         run: |
           newman run mock_operator.postman_collection.json \
             -e mock_operator.postman_environment.json \
-            --reporters cli,json,html \
-            --reporter-json-export results.json \
-            --reporter-html-export newman-report.html
+            -r cli,htmlextra \
+            --reporter-htmlextra-export newman-report.html
 
-      - name: Extraer resultados de ejecución
+      - name: Parse test results
         id: resultados
         run: |
-          if [ -f results.json ]; then
-            TOTAL=$(jq '.run.stats.requests.total' results.json)
-            FAILED=$(jq '.run.stats.requests.failed' results.json)
+          if [ -f newman-report.html ]; then
+            TOTAL=$(grep -oP 'Total Assertions[\s\S]*?<td>\K\d+' newman-report.html | head -1 || echo 0)
+            FAILED=$(grep -oP 'Failed Assertions[\s\S]*?<td>\K\d+' newman-report.html | head -1 || echo 0)
             SUCCESS=$((TOTAL - FAILED))
           else
             TOTAL=0
@@ -39,7 +38,7 @@ jobs:
           echo "success=$SUCCESS" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
 
-      - name: Subir artefacto del HTML solamente
+      - name: Subir artefacto HTML
         uses: actions/upload-artifact@v4
         with:
           name: newman-report
