@@ -1,4 +1,4 @@
-name: Run Newman Tests
+name: operator_automation
 
 on:
   push:
@@ -49,11 +49,11 @@ jobs:
           SUCCESS=${{ steps.resultados.outputs.success }}
           FAILED=${{ steps.resultados.outputs.failed }}
           # Construimos el texto con emojis reales
-          STATUS="🚀 Resultados de pruebas Newman:\n\
+          STATUS="🚀 Resultados de pruebas Mock:\n\
           ✅ Requests exitosos: $SUCCESS  \
           ❌ Fallos en requests: $FAILED  \
           📊 Total de requests: $TOTAL"
-          # Armamos el payload JSON escapando las comillas internas
+          # Armado de Payload
           PAYLOAD="{\"text\":\"$STATUS\"}"
           curl -X POST \
                -H 'Content-Type: application/json' \
