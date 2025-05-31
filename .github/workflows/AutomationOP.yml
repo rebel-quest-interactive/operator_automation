@@ -3,7 +3,7 @@ name: Run Newman Tests
 on:
   push:
     branches:
-      - MAIN
+      - main
   workflow_dispatch:
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Install Newman
         run: npm install -g newman
