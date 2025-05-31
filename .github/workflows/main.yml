@@ -23,12 +23,15 @@ jobs:
             -e mock_operator.postman_environment.json \
             --reporters cli,json --reporter-json-export results.json
 
-      - name: Extraer resultados de ejecución
+      - name: Extraer resultados de ejecución (requests)
         id: resultados
         run: |
           if [ -f results.json ]; then
-            TOTAL=$(jq '.run.stats.assertions.total' results.json)
-            FAILED=$(jq '.run.stats.assertions.failed' results.json)
+            # TOTAL = número de requests ejecutados
+            TOTAL=$(jq '.run.stats.requests.total' results.json)
+            # FAILED = número de requests fallidos
+            FAILED=$(jq '.run.stats.requests.failed' results.json)
+            # SUCCESS = número de requests exitosos
             SUCCESS=$((TOTAL - FAILED))
           else
             TOTAL=0
@@ -43,15 +46,20 @@ jobs:
       - name: Enviar notificación a Slack
         shell: bash
         env:
-          # Aquí usamos el Secret en lugar de poner la URL explícita
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           TOTAL=${{ steps.resultados.outputs.total }}
           SUCCESS=${{ steps.resultados.outputs.success }}
           FAILED=${{ steps.resultados.outputs.failed }}
 
-          STATUS="✅ Éxito: $SUCCESS  ❌ Fallos: $FAILED  📊 Total: $TOTAL"
-          PAYLOAD="{\"text\":\"🚀 *Resultados de pruebas Newman:*\\n$STATUS\"}"
+          # Construimos el texto con emojis reales
+          STATUS="🚀 Resultados de pruebas Newman:\n\
+          ✅ Requests exitosos: $SUCCESS  \
+          ❌ Fallos en requests: $FAILED  \
+          📊 Total de requests: $TOTAL"
+
+          # Armamos el payload JSON escapando las comillas internas
+          PAYLOAD="{\"text\":\"$STATUS\"}"
 
           curl -X POST \
                -H 'Content-Type: application/json' \
