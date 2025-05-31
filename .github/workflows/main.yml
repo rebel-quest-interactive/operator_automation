@@ -49,11 +49,12 @@ jobs:
         shell: bash
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          TOTAL: ${{ steps.resultados.outputs.total }}
-          SUCCESS: ${{ steps.resultados.outputs.success }}
-          FAILED: ${{ steps.resultados.outputs.failed }}
           ARTIFACTS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
         run: |
+          TOTAL="${{ steps.resultados.outputs.total }}"
+          SUCCESS="${{ steps.resultados.outputs.success }}"
+          FAILED="${{ steps.resultados.outputs.failed }}"
+
           PAYLOAD='{
             "blocks": [
               {
@@ -65,20 +66,24 @@ jobs:
               },
               {
                 "type": "section",
-                "fields": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "*✅ Éxito:*\n'"$SUCCESS"'"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*❌ Fallos:*\n'"$FAILED"'"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*📊 Total:*\n'"$TOTAL"'"
-                  }
-                ]
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*📊 Total:* '"$TOTAL"'"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*✅ Éxito:* '"$SUCCESS"'"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*❌ Fallos:* '"$FAILED"'"
+                }
               },
               {
                 "type": "actions",
