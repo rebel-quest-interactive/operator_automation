@@ -14,27 +14,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Newman and HTML reporter
-        run: |
-          npm install -g newman newman-reporter-html
+      - name: Install Newman
+        run: npm install -g newman
 
       - name: Run Postman collection
         run: |
           newman run mock_operator.postman_collection.json \
             -e mock_operator.postman_environment.json \
             --reporters cli,json,html \
-            --reporter-json-export results.json \
-            --reporter-html-export newman-report.html
+            --reporter-html-export results.html \
+            --reporter-json-export results.json
 
       - name: Extraer resultados de ejecución (requests)
         id: resultados
         run: |
           if [ -f results.json ]; then
-            # TOTAL = número de requests ejecutados
             TOTAL=$(jq '.run.stats.requests.total' results.json)
-            # FAILED = número de requests fallidos
             FAILED=$(jq '.run.stats.requests.failed' results.json)
-            # SUCCESS = número de requests exitosos
             SUCCESS=$((TOTAL - FAILED))
           else
             TOTAL=0
@@ -45,13 +41,11 @@ jobs:
           echo "success=$SUCCESS" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
 
-      - name: Subir artefactos de resultados
+      - name: Subir reporte HTML como artefacto
         uses: actions/upload-artifact@v4
         with:
-          name: newman-reports
-          path: |
-            results.json
-            newman-report.html
+          name: newman-report
+          path: results.html
 
       - name: Enviar notificación a Slack
         shell: bash
@@ -62,20 +56,19 @@ jobs:
           SUCCESS=${{ steps.resultados.outputs.success }}
           FAILED=${{ steps.resultados.outputs.failed }}
           REPO="${{ github.repository }}"
-          BRANCH="${{ github.ref_name }}"
-          COMMIT_AUTHOR="${{ github.actor }}"
           RUN_ID="${{ github.run_id }}"
 
-          # Link a los artefactos de este workflow
+          # Link al artefacto HTML en GitHub
           ARTIFACTS_URL="https://github.com/$REPO/actions/runs/$RUN_ID"
 
-          STATUS="🚀 *Resultados de pruebas Mock:*\n"
-          STATUS+="✅ Requests exitosos: $SUCCESS\n"
-          STATUS+="❌ Fallos en requests: $FAILED\n"
-          STATUS+="📊 Total de requests: $TOTAL\n"
-          STATUS+="────────────────────────────\n"
-          STATUS+="🔗 *[Descargar reporte HTML aquí]($ARTIFACTS_URL)*"
+          # Construir mensaje en Slack con un solo bloque
+          STATUS="🚀 *Resultados de pruebas Mock:*  "
+          STATUS+="✅ *Éxito:* $SUCCESS  "
+          STATUS+="❌ *Fallos:* $FAILED  "
+          STATUS+="📊 *Total:* $TOTAL  "
+          STATUS+="🔗 *<${ARTIFACTS_URL}|Descargar reporte HTML aquí>*"
 
+          # Usar jq para formatear JSON correctamente
           PAYLOAD=$(jq -n --arg text "$STATUS" '{"text": $text}')
 
           curl -X POST \
