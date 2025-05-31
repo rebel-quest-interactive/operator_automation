@@ -3,7 +3,7 @@ name: Run Newman Tests
 on:
   push:
     branches:
-      - MAIN
+      - main
   workflow_dispatch:
 
 jobs:
@@ -11,20 +11,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout del repositorio
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 📦 Instalar Newman
+      - name: Install Newman
         run: npm install -g newman
 
-      - name: 🧪 Ejecutar colección Postman
+      - name: Run Postman collection
         run: |
           newman run mock_operator.postman_collection.json \
             -e mock_operator.postman_environment.json \
-            --reporters cli,json \
-            --reporter-json-export results.json || true  # Evita que falle el job si hay errores
+            --reporters cli,json --reporter-json-export results.json
 
-      - name: 📊 Procesar resultados
+      - name: Extraer resultados de ejecución
         id: resultados
         run: |
           if [ -f results.json ]; then
@@ -33,25 +32,23 @@ jobs:
             SUCCESS=$((TOTAL - FAILED))
           else
             TOTAL=0
-            FAILED=0
             SUCCESS=0
+            FAILED=0
           fi
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
-          echo "failed=$FAILED" >> $GITHUB_OUTPUT
           echo "success=$SUCCESS" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
 
-      - name: 📤 Subir reporte como artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: newman-results
-          path: results.json
-
-      - name: 📢 Notificar resultados a Slack
+      - name: Enviar notificación a Slack
+        env:
+          SLACK_WEBHOOK_URL: https://hooks.slack.com/services/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
         run: |
           TOTAL=${{ steps.resultados.outputs.total }}
           SUCCESS=${{ steps.resultados.outputs.success }}
           FAILED=${{ steps.resultados.outputs.failed }}
+
           STATUS="✅ *Éxito:* $SUCCESS\n❌ *Fallos:* $FAILED\n📊 *Total:* $TOTAL"
+
           curl -X POST -H 'Content-type: application/json' --data "{
             \"text\": \"🚀 *Resultados de pruebas Newman:*\n\n$STATUS\"
-          }" https://hooks.slack.com/triggers/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
+          }" "$SLACK_WEBHOOK_URL"
