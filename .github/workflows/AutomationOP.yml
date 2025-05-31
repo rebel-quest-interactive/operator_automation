@@ -1,17 +1,76 @@
-name: Automated API tests using Postman CLI
+name: Test_Automated_Operator_Automation
 
-on: push
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 13 * * *' # 8:00 AM Colombia (UTC-5)
+    - cron: '0 17 * * *' # 12:00 PM Colombia (UTC-5)
+    - cron: '0 23 * * *' # 6:00 PM Colombia (UTC-5)
+
+permissions:
+  contents: write
 
 jobs:
-  automated-api-tests:
+  operator_automation:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Postman CLI
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache Node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Newman & reporters
+        run: npm install -g newman newman-reporter-htmlextra
+
+      - name: Run Postman Collection
+        id: newman_tests
         run: |
-          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
-      - name: Login to Postman CLI
-        run: postman login --with-api-key PMAK-683a63d3a72ce60001fb3870-4a565e12aaa7308d62d4e3083e44ad8b56
-      - name: Run API tests
+          newman run operator_automation/Mock\ Operator.postman_collection.json \
+            -e operator_automation/Mock\ Operator.postman_environment.json \
+            -r json,htmlextra \
+            --reporter-json-export newman-report.json \
+            --reporter-htmlextra-export newman-report.html || echo "newman_failed=true" >> $GITHUB_ENV
+
+      - name: Save reports to artifacts-storage branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: artifacts-storage
         run: |
-          postman collection run "22566339-a5a26bdf-9103-4f99-a40a-908b2fd7d7e4" -e "22566339-0bad0ad6-5504-45b1-877a-f66f32ca2772"
+          set -e
+          FOLDER_NAME="operator-automation-$(date +'%Y-%m-%dT%H-%M-%S')"
+
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+          git fetch origin $BRANCH || true
+          git switch $BRANCH 2>/dev/null || git checkout --orphan $BRANCH
+
+          mkdir -p "$FOLDER_NAME"
+          if [ -f newman-report.html ]; then cp newman-report.html "$FOLDER_NAME/"; fi
+          if [ -f newman-report.json ]; then cp newman-report.json "$FOLDER_NAME/"; fi
+
+          git add "$FOLDER_NAME"
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Add reports from run $GITHUB_RUN_ID on $FOLDER_NAME"
+            git push https://x-access-token:${GITHUB_TOKEN}@github.com/${REPOSITORY}.git $BRANCH
+          else
+            echo "No hay nuevos archivos para commitear"
+          fi
+
+          git switch -
