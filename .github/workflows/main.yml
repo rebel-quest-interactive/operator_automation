@@ -1,4 +1,4 @@
-name: operator_automation
+name: Operator_automation
 
 on:
   push:
