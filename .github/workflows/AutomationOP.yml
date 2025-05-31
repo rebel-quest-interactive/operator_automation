@@ -3,7 +3,7 @@ name: Run Newman Tests
 on:
   push:
     branches:
-      - main
+      - MAIN
   workflow_dispatch:
 
 jobs:
@@ -11,20 +11,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: 📥 Checkout del repositorio
+        uses: actions/checkout@v4
 
-      - name: Install Newman
+      - name: 📦 Instalar Newman
         run: npm install -g newman
 
-      - name: Run Postman collection
+      - name: 🧪 Ejecutar colección Postman
         run: |
           newman run mock_operator.postman_collection.json \
-          -e mock_operator.postman_environment.json \
-          --reporters cli,json --reporter-json-export results.json
+            -e mock_operator.postman_environment.json \
+            --reporters cli,json \
+            --reporter-json-export results.json
 
-      - name: Upload results
-        uses: actions/upload-artifact@v3
+      - name: 📤 Subir resultados de Newman
+        uses: actions/upload-artifact@v4
         with:
           name: newman-results
           path: results.json
