@@ -3,7 +3,7 @@ name: Run Newman Tests
 on:
   push:
     branches:
-      - main
+      - main  # revisa que tu rama se llame así, no MAIN en mayúsculas
   workflow_dispatch:
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Newman
         run: npm install -g newman
@@ -24,7 +24,7 @@ jobs:
           --reporters cli,json --reporter-json-export results.json
 
       - name: Upload results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: newman-results
           path: results.json
