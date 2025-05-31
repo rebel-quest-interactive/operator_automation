@@ -1,31 +1,22 @@
 name: operator_automation
-
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
-
 jobs:
   newman_test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install Newman
         run: npm install -g newman
 
       - name: Run Postman collection
         run: |
-          newman run mock_operator.postman_collection.json \
-            -e mock_operator.postman_environment.json \
-            --reporters cli,json,html \
-            --reporter-json-export results.json \
-            --reporter-html-export newman-report.html
+          newman run mock_operator.postman_collection.json -e mock_operator.postman_environment.json --reporters cli,json,html --reporter-json-export results.json --reporter-html-export newman-report.html
 
-      - name: Extraer resultados de ejecución (requests)
+      - name: Extraer resultados de ejecución
         id: resultados
         run: |
           if [ -f results.json ]; then
@@ -58,7 +49,7 @@ jobs:
           FAILED: ${{ steps.resultados.outputs.failed }}
           ARTIFACTS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         run: |
-          read -r -d '' PAYLOAD << EOF
+          read -r -d '' PAYLOAD <<EOF
 {
   "blocks": [
     {
@@ -101,7 +92,4 @@ jobs:
   ]
 }
 EOF
-          curl -X POST \
-               -H 'Content-Type: application/json' \
-               --data "$PAYLOAD" \
-               "$SLACK_WEBHOOK_URL"
+          curl -X POST -H 'Content-Type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
