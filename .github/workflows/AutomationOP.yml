@@ -33,6 +33,13 @@ jobs:
       - name: Install Newman & reporters
         run: npm install -g newman newman-reporter-htmlextra
 
+      - name: Verify Environment File Exists
+        run: |
+          if [ ! -f "operator_automation/Mock Operator.postman_environment.json" ]; then
+            echo "Error: Environment file not found!"
+            exit 1
+          fi
+
       - name: Run Postman Collection
         run: |
           newman run "operator_automation/Mock Operator.postman_collection.json" \
