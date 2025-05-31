@@ -1,100 +1,33 @@
-name: operator_automation
+name: Automated API tests using Postman CLI
 
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+on: push
 
 jobs:
-  newman_test:
+  automated-api-tests:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Install Newman & HTML Reporter
-        run: npm install -g newman newman-reporter-htmlextra
+      - name: Install Postman CLI
+        run: |
+          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
 
-      - name: Run Postman collection and generate reports
+      - name: Login to Postman CLI
+        run: postman login --with-api-key ${{ secrets.POSTMAN_API_KEY }}
+
+      - name: Run API tests and export reports
         run: |
-          newman run mock_operator.postman_collection.json \
-            -e mock_operator.postman_environment.json \
-            -r cli,json,htmlextra \
-            --reporter-json-export newman-report.json \
-            --reporter-htmlextra-export newman-report.html
-      - name: Extraer resultados de ejecución (requests)
-        id: resultados
-        run: |
-          if [ -f newman-report.json ]; then
-            TOTAL=$(jq '.run.stats.requests.total' newman-report.json)
-            FAILED=$(jq '.run.stats.requests.failed' newman-report.json)
-            SUCCESS=$((TOTAL - FAILED))
-          else
-            TOTAL=0
-            SUCCESS=0
-            FAILED=0
-          fi
-          echo "total=$TOTAL" >> $GITHUB_OUTPUT
-          echo "success=$SUCCESS" >> $GITHUB_OUTPUT
-          echo "failed=$FAILED" >> $GITHUB_OUTPUT
-      - name: Subir solo el HTML como artefacto
+          mkdir -p output
+          postman collection run "45485451-3ff904a6-886a-41c5-b03e-f862fb679a05" \
+            -e "45485451-4a02d0d7-b50b-451c-98ca-44e7cde4e7cb" \
+            --reporters cli,json,html \
+            --reporter-json-export output/report.json \
+            --reporter-html-export output/report.html
+
+      - name: Upload Postman test reports
         uses: actions/upload-artifact@v4
         with:
-          name: newman-report
-          path: newman-report.html
-
-      - name: Enviar notificación a Slack
-        shell: bash
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          ARTIFACTS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
-        run: |
-          TOTAL="${{ steps.resultados.outputs.total }}"
-          SUCCESS="${{ steps.resultados.outputs.success }}"
-          FAILED="${{ steps.resultados.outputs.failed }}"
-          PAYLOAD='{
-            "blocks": [
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": ":rocket: *Resultados de pruebas Mock*"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*📊 Total:* '"$TOTAL"'"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*✅ Éxito:* '"$SUCCESS"'"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*❌ Fallos:* '"$FAILED"'"
-                }
-              },
-              {
-                "type": "actions",
-                "elements": [
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Ver reporte HTML"
-                    },
-                    "url": "'"$ARTIFACTS_URL"'"
-                  }
-                ]
-              }
-            ]
-          }'
-          curl -X POST -H 'Content-Type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
+          name: postman-reports
+          path: output/
