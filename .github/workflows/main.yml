@@ -10,12 +10,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install Newman & HTML Reporter
         run: npm install -g newman newman-reporter-htmlextra
 
-      - name: Run “Auth” and export environment
+      # 1) Ejecutar “Auth” y exportar entorno actualizado
+      - name: Run Auth and export environment
         run: |
           newman run mock_operator.postman_collection.json \
             --folder Auth \
@@ -23,7 +25,8 @@ jobs:
             --export-environment exported_env_auth.json \
             --reporters cli
 
-      - name: Run “Sell” and export environment
+      # 2) Ejecutar “Sell” usando exported_env_auth.json y exportar entorno
+      - name: Run Sell and export environment
         run: |
           newman run mock_operator.postman_collection.json \
             --folder Sell \
@@ -32,7 +35,8 @@ jobs:
             --reporters json \
             --reporter-json-export sell-report.json
 
-      - name: Run “Win” and export environment
+      # 3) Ejecutar “Win” usando exported_env_sell.json y exportar entorno
+      - name: Run Win and export environment
         run: |
           newman run mock_operator.postman_collection.json \
             --folder "Credit - Win" \
@@ -41,7 +45,8 @@ jobs:
             --reporters json \
             --reporter-json-export win-report.json
 
-      - name: Run “Cancel” and export environment
+      # 4) Ejecutar “Cancel” usando exported_env_win.json y exportar entorno
+      - name: Run Cancel and export environment
         run: |
           newman run mock_operator.postman_collection.json \
             --folder Cancel \
@@ -50,7 +55,8 @@ jobs:
             --reporters json \
             --reporter-json-export cancel-report.json
 
-      - name: Run “Loss” and export environment
+      # 5) Ejecutar “Loss” usando exported_env_cancel.json y exportar entorno
+      - name: Run Loss and export environment
         run: |
           newman run mock_operator.postman_collection.json \
             --folder "Credit - Loss" \
@@ -59,6 +65,7 @@ jobs:
             --reporters json \
             --reporter-json-export loss-report.json
 
+      # 6) Combinar los JSON de resultados en newman-report.json
       - name: Merge JSON results into newman-report.json
         run: |
           jq -s '{
@@ -87,22 +94,24 @@ jobs:
             loss-report.json \
           > newman-report.json || echo "{}" > newman-report.json
 
-      - name: Generate a simple HTML summary
+      # 7) Generar un HTML de resumen simple basado en newman-report.json
+      - name: Generate HTML summary
         run: |
           TOTAL=$(jq '.run.stats.requests.total' newman-report.json)
           FAILED=$(jq '.run.stats.requests.failed' newman-report.json)
           SUCCESS=$((TOTAL - FAILED))
           cat <<EOF > newman-report.html
 <html>
-<body>
-  <h1>Resultados de pruebas Mock</h1>
-  <p>Total de requests: $TOTAL</p>
-  <p>✅ Éxito: $SUCCESS</p>
-  <p>❌ Fallos: $FAILED</p>
-</body>
+  <body>
+    <h1>Resultados de pruebas Mock</h1>
+    <p>Total de requests: $TOTAL</p>
+    <p>✅ Éxito: $SUCCESS</p>
+    <p>❌ Fallos: $FAILED</p>
+  </body>
 </html>
 EOF
 
+      # 8) Extraer resultados para usarlos en la notificación de Slack
       - name: Extraer resultados de ejecución (requests)
         id: resultados
         run: |
@@ -119,12 +128,14 @@ EOF
           echo "success=$SUCCESS" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
 
+      # 9) Subir solo el HTML como artefacto
       - name: Subir solo el HTML como artefacto
         uses: actions/upload-artifact@v4
         with:
           name: newman-report
           path: newman-report.html
 
+      # 10) Enviar notificación a Slack con los resultados en vertical
       - name: Enviar notificación a Slack
         shell: bash
         env:
