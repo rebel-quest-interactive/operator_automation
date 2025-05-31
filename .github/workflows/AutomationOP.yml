@@ -3,7 +3,7 @@ name: Test_Automated_Operator_Automation
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
   workflow_dispatch:
   schedule:
@@ -35,15 +35,18 @@ jobs:
 
       - name: Verify Environment File Exists
         run: |
-          if [ ! -f "operator_automation/Mock Operator.postman_environment.json" ]; then
+          if [ ! -f "operator_automation/Mock_Operator.postman_environment.json" ]; then
             echo "Error: Environment file not found!"
             exit 1
           fi
 
+      - name: Debug File Listing
+        run: ls -l operator_automation/
+
       - name: Run Postman Collection
         run: |
-          newman run "operator_automation/Mock Operator.postman_collection.json" \
-            -e "operator_automation/Mock Operator.postman_environment.json" \
+          newman run "operator_automation/Mock_Operator.postman_collection.json" \
+            -e "operator_automation/Mock_Operator.postman_environment.json" \
             -r json,htmlextra \
             --reporter-json-export newman-report.json \
             --reporter-htmlextra-export newman-report.html
