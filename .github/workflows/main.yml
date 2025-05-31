@@ -22,24 +22,24 @@ jobs:
           newman run mock_operator.postman_collection.json \
             -e mock_operator.postman_environment.json \
             --reporters cli,json --reporter-json-export results.json
-
       - name: Extraer resultados de ejecución (requests)
         id: resultados
         run: |
           if [ -f results.json ]; then
+            # TOTAL = número de requests ejecutados
             TOTAL=$(jq '.run.stats.requests.total' results.json)
+            # FAILED = número de requests fallidos
             FAILED=$(jq '.run.stats.requests.failed' results.json)
+            # SUCCESS = número de requests exitosos
             SUCCESS=$((TOTAL - FAILED))
           else
             TOTAL=0
             SUCCESS=0
             FAILED=0
           fi
-
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
           echo "success=$SUCCESS" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
-
       - name: Enviar notificación a Slack
         shell: bash
         env:
@@ -48,16 +48,14 @@ jobs:
           TOTAL=${{ steps.resultados.outputs.total }}
           SUCCESS=${{ steps.resultados.outputs.success }}
           FAILED=${{ steps.resultados.outputs.failed }}
-
-          REPO="${{ github.repository }}"
-          BRANCH="${{ github.ref_name }}"
-          COMMIT_AUTHOR="${{ github.actor }}"
-          WORKFLOW_NAME="${{ github.workflow }}"
-
-          STATUS_MSG="*🚀 Resultados de pruebas Newman:*\n"
-          STATUS_MSG+="*Repositorio:* \`$REPO\`  \n"
-          STATUS_MSG+="*Rama:* \`$BRANCH\`  \n"
-          STATUS_MSG+="*Autor:* $COMMIT_AUTHOR  \n"
-          STATUS_MSG+="────────────────────────────\n"
-          STATUS_MSG+="✅ *Requests exitosos:* $SUCCESS\n"
-          STATUS_MSG+=_
+          # Construimos el texto con emojis reales
+          STATUS="🚀 Resultados de pruebas Newman:\n\
+          ✅ Requests exitosos: $SUCCESS  \
+          ❌ Fallos en requests: $FAILED  \
+          📊 Total de requests: $TOTAL"
+          # Armamos el payload JSON escapando las comillas internas
+          PAYLOAD="{\"text\":\"$STATUS\"}"
+          curl -X POST \
+               -H 'Content-Type: application/json' \
+               --data "$PAYLOAD" \
+               "$SLACK_WEBHOOK_URL"
