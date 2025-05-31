@@ -36,7 +36,6 @@ jobs:
             FAILED=0
           fi
 
-          # Publicar los outputs para que estén disponibles en steps.resultados.outputs.*
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
           echo "success=$SUCCESS" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
@@ -44,20 +43,16 @@ jobs:
       - name: Enviar notificación a Slack
         shell: bash
         env:
-          # Asumiendo que ya has configurado SLACK_WEBHOOK_URL como un secreto en GitHub
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/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"
         run: |
           TOTAL=${{ steps.resultados.outputs.total }}
           SUCCESS=${{ steps.resultados.outputs.success }}
           FAILED=${{ steps.resultados.outputs.failed }}
 
-          STATUS="✅ Éxito: $SUCCESS\n❌ Fallos: $FAILED\n📊 Total: $TOTAL"
+          STATUS="✅ Éxito: $SUCCESS  ❌ Fallos: $FAILED  📊 Total: $TOTAL"
+          PAYLOAD="{\"text\":\"🚀 *Resultados de pruebas Newman:*\\n$STATUS\"}"
 
-          PAYLOAD=$(cat <<EOF
-          {
-            "text": "🚀 *Resultados de pruebas Newman:*\n$STATUS"
-          }
-          EOF
-          )
-
-          curl -X POST -H "Content-type: application/json" --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
+          curl -X POST \
+               -H 'Content-Type: application/json' \
+               --data "$PAYLOAD" \
+               "$SLACK_WEBHOOK_URL"
