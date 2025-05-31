@@ -39,13 +39,11 @@ jobs:
           echo "success=$SUCCESS" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
 
-      - name: Subir artefactos de resultados
+      - name: Subir artefacto del HTML solamente
         uses: actions/upload-artifact@v4
         with:
-          name: newman-results
-          path: |
-            results.json
-            newman-report.html
+          name: newman-report
+          path: newman-report.html
 
       - name: Enviar notificación a Slack
         shell: bash
@@ -101,5 +99,4 @@ jobs:
               }
             ]
           }'
-
           curl -X POST -H 'Content-Type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
