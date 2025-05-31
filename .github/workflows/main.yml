@@ -14,14 +14,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Newman
-        run: npm install -g newman
+      - name: Install Newman and HTML reporter
+        run: |
+          npm install -g newman newman-reporter-html
 
       - name: Run Postman collection
         run: |
           newman run mock_operator.postman_collection.json \
             -e mock_operator.postman_environment.json \
-            --reporters cli,json --reporter-json-export results.json
+            --reporters cli,json,html \
+            --reporter-json-export results.json \
+            --reporter-html-export newman-report.html
+
       - name: Extraer resultados de ejecución (requests)
         id: resultados
         run: |
@@ -40,6 +44,15 @@ jobs:
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
           echo "success=$SUCCESS" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
+
+      - name: Subir artefactos de resultados
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-reports
+          path: |
+            results.json
+            newman-report.html
+
       - name: Enviar notificación a Slack
         shell: bash
         env:
@@ -48,13 +61,23 @@ jobs:
           TOTAL=${{ steps.resultados.outputs.total }}
           SUCCESS=${{ steps.resultados.outputs.success }}
           FAILED=${{ steps.resultados.outputs.failed }}
-          # Construimos el texto con emojis reales
-          STATUS="🚀 Resultados de pruebas Mock:\n\
-          ✅ Requests exitosos: $SUCCESS  \
-          ❌ Fallos en requests: $FAILED  \
-          📊 Total de requests: $TOTAL"
-          # Armado de Payload
-          PAYLOAD="{\"text\":\"$STATUS\"}"
+          REPO="${{ github.repository }}"
+          BRANCH="${{ github.ref_name }}"
+          COMMIT_AUTHOR="${{ github.actor }}"
+          RUN_ID="${{ github.run_id }}"
+
+          # Link a los artefactos de este workflow
+          ARTIFACTS_URL="https://github.com/$REPO/actions/runs/$RUN_ID"
+
+          STATUS="🚀 *Resultados de pruebas Mock:*\n"
+          STATUS+="✅ Requests exitosos: $SUCCESS\n"
+          STATUS+="❌ Fallos en requests: $FAILED\n"
+          STATUS+="📊 Total de requests: $TOTAL\n"
+          STATUS+="────────────────────────────\n"
+          STATUS+="🔗 *[Descargar reporte HTML aquí]($ARTIFACTS_URL)*"
+
+          PAYLOAD=$(jq -n --arg text "$STATUS" '{"text": $text}')
+
           curl -X POST \
                -H 'Content-Type: application/json' \
                --data "$PAYLOAD" \
