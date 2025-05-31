@@ -1,60 +1,30 @@
-name: Test_Automated_Operator_Automation
+name: Run Newman Tests
 
 on:
   push:
     branches:
-      - main
-  pull_request:
+      - MAIN
   workflow_dispatch:
-  schedule:
-    - cron: '0 13 * * *' # 8:00 AM Colombia (UTC-5)
-    - cron: '0 17 * * *' # 12:00 PM Colombia (UTC-5)
-    - cron: '0 23 * * *' # 6:00 PM Colombia (UTC-5)
 
 jobs:
-  operator_automation:
+  newman_test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache Node modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      - name: Install Newman
+        run: npm install -g newman
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install Newman & reporters
-        run: npm install -g newman newman-reporter-htmlextra
-
-      - name: Verify Environment File Exists
+      - name: Run Postman collection
         run: |
-          if [ ! -f "operator_automation/Mock_Operator.postman_environment.json" ]; then
-            echo "Error: Environment file not found!"
-            exit 1
-          fi
+          newman run mock_operator.postman_collection.json \
+          -e mock_operator.postman_environment.json \
+          --reporters cli,json --reporter-json-export results.json
 
-      - name: Debug File Listing
-        run: ls -l operator_automation/
-
-      - name: Run Postman Collection
-        run: |
-          newman run "operator_automation/Mock_Operator.postman_collection.json" \
-            -e "operator_automation/Mock_Operator.postman_environment.json" \
-            -r json,htmlextra \
-            --reporter-json-export newman-report.json \
-            --reporter-htmlextra-export newman-report.html
-
-      - name: Upload Newman Report as Artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload results
+        uses: actions/upload-artifact@v3
         with:
-          name: operator-automation-report
-          path: |
-            newman-report.html
-            newman-report.json
+          name: newman-results
+          path: results.json
