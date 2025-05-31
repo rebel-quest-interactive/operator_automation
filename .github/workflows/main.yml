@@ -54,7 +54,7 @@ jobs:
           TOTAL: ${{ steps.resultados.outputs.total }}
           SUCCESS: ${{ steps.resultados.outputs.success }}
           FAILED: ${{ steps.resultados.outputs.failed }}
-          ARTIFACTS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          ARTIFACTS_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
         run: |
           PAYLOAD='{
             "blocks": [
@@ -93,7 +93,7 @@ jobs:
                     "type": "button",
                     "text": {
                       "type": "plain_text",
-                      "text": "Descargar reporte HTML"
+                      "text": "Ver reporte HTML"
                     },
                     "url": "'"$ARTIFACTS_URL"'"
                   }
