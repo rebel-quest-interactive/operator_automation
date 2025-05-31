@@ -14,16 +14,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Newman
-        run: npm install -g newman
+      - name: Install Newman and HTML reporter
+        run: npm install -g newman newman-reporter-html
 
       - name: Run Postman collection
         run: |
           newman run mock_operator.postman_collection.json \
             -e mock_operator.postman_environment.json \
             --reporters cli,json,html \
-            --reporter-html-export results.html \
-            --reporter-json-export results.json
+            --reporter-json-export results.json \
+            --reporter-html-export newman-report.html
 
       - name: Extraer resultados de ejecución (requests)
         id: resultados
@@ -37,39 +37,76 @@ jobs:
             SUCCESS=0
             FAILED=0
           fi
+
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
           echo "success=$SUCCESS" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
 
-      - name: Subir reporte HTML como artefacto
+      - name: Subir artefactos de resultados
         uses: actions/upload-artifact@v4
         with:
-          name: newman-report
-          path: results.html
+          name: newman-results
+          path: |
+            results.json
+            newman-report.html
 
       - name: Enviar notificación a Slack
         shell: bash
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          TOTAL=${{ steps.resultados.outputs.total }}
-          SUCCESS=${{ steps.resultados.outputs.success }}
-          FAILED=${{ steps.resultados.outputs.failed }}
+          TOTAL="${{ steps.resultados.outputs.total }}"
+          SUCCESS="${{ steps.resultados.outputs.success }}"
+          FAILED="${{ steps.resultados.outputs.failed }}"
           REPO="${{ github.repository }}"
           RUN_ID="${{ github.run_id }}"
 
-          # Link al artefacto HTML en GitHub
           ARTIFACTS_URL="https://github.com/$REPO/actions/runs/$RUN_ID"
 
-          # Construir mensaje en Slack con un solo bloque
-          STATUS="🚀 *Resultados de pruebas Mock:*  "
-          STATUS+="✅ *Éxito:* $SUCCESS  "
-          STATUS+="❌ *Fallos:* $FAILED  "
-          STATUS+="📊 *Total:* $TOTAL  "
-          STATUS+="🔗 *<${ARTIFACTS_URL}|Descargar reporte HTML aquí>*"
-
-          # Usar jq para formatear JSON correctamente
-          PAYLOAD=$(jq -n --arg text "$STATUS" '{"text": $text}')
+          # Construir payload usando Slack Block Kit para una presentación limpia
+          read -r -d '' PAYLOAD <<EOF
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": ":rocket: *Resultados de pruebas Mock*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {
+          "type": "mrkdwn",
+          "text": "*✅ Éxito:*\n$SUCCESS"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*❌ Fallos:*\n$FAILED"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*📊 Total:*\n$TOTAL"
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Descargar reporte HTML"
+          },
+          "url": "$ARTIFACTS_URL"
+        }
+      ]
+    }
+  ]
+}
+EOF
 
           curl -X POST \
                -H 'Content-Type: application/json' \
