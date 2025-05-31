@@ -103,7 +103,6 @@ jobs:
     }
   ]
 }
-EOF
 
           
           # Enviar el mensaje a Slack
