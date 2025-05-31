@@ -27,11 +27,8 @@ jobs:
         id: resultados
         run: |
           if [ -f results.json ]; then
-            # TOTAL = número de requests ejecutados
             TOTAL=$(jq '.run.stats.requests.total' results.json)
-            # FAILED = número de requests fallidos
             FAILED=$(jq '.run.stats.requests.failed' results.json)
-            # SUCCESS = número de requests exitosos
             SUCCESS=$((TOTAL - FAILED))
           else
             TOTAL=0
@@ -52,16 +49,15 @@ jobs:
           SUCCESS=${{ steps.resultados.outputs.success }}
           FAILED=${{ steps.resultados.outputs.failed }}
 
-          # Construimos el texto con emojis reales
-          STATUS="🚀 Resultados de pruebas Newman:\n\
-          ✅ Requests exitosos: $SUCCESS  \
-          ❌ Fallos en requests: $FAILED  \
-          📊 Total de requests: $TOTAL"
+          REPO="${{ github.repository }}"
+          BRANCH="${{ github.ref_name }}"
+          COMMIT_AUTHOR="${{ github.actor }}"
+          WORKFLOW_NAME="${{ github.workflow }}"
 
-          # Armamos el payload JSON escapando las comillas internas
-          PAYLOAD="{\"text\":\"$STATUS\"}"
-
-          curl -X POST \
-               -H 'Content-Type: application/json' \
-               --data "$PAYLOAD" \
-               "$SLACK_WEBHOOK_URL"
+          STATUS_MSG="*🚀 Resultados de pruebas Newman:*\n"
+          STATUS_MSG+="*Repositorio:* \`$REPO\`  \n"
+          STATUS_MSG+="*Rama:* \`$BRANCH\`  \n"
+          STATUS_MSG+="*Autor:* $COMMIT_AUTHOR  \n"
+          STATUS_MSG+="────────────────────────────\n"
+          STATUS_MSG+="✅ *Requests exitosos:* $SUCCESS\n"
+          STATUS_MSG+=_
